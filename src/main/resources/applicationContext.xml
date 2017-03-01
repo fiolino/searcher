@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:session="http://www.springframework.org/schema/session"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/session
+        http://www.springframework.org/schema/session/spring-session.xsd">
+
+    <session:annotation-config />
+        
+
+    <bean id="dataSource" class="${jdbc.dataSourceClassName}" >
+        <property name="serverName" value="${jdbc.host}"/>
+        <property name="databaseName" value="${jdbc.database}"/>
+        <property name="portNumber" value="${jdbc.port}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <bean id="solrServer" class="org.apache.solr.client.solrj.impl.HttpSolrServer">
+        <constructor-arg value="${solr.url}" />
+    </bean>
+
+    <session:property-placeholder location="indexer.properties"/>
+
+</beans>

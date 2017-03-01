@@ -1,0 +1,53 @@
+plugins {
+    id 'java'
+    id 'maven'
+    id 'maven-publish'
+    id "net.linguica.maven-settings" version "0.5"
+}
+
+task sourceJar(type: Jar, dependsOn: classes) {
+    classifier 'sources'
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name "default"
+            url publicUrl
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+		name "default"
+        url publicUrl
+    }
+}
+
+dependencies {
+    compile     ('org.reflections:reflections:' +libReflectionsVersion)
+    compile     ('org.apache.solr:solr-solrj:' +libSolrjVersion)
+    compile ('org.slf4j:slf4j-api:'+libSlf4jVersion)
+    compile('com.google.code.gson:gson:2.8.0') {exclude group: '*' }
+    compile ('org.fiolino:commons:' +libCommonsVersion)
+
+    testCompile group: 'junit', name: 'junit', version: '4.+'
+
+}
+
