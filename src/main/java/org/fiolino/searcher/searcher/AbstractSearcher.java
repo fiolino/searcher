@@ -8,6 +8,7 @@ import org.apache.solr.client.solrj.response.TermsResponse.Term;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.fiolino.common.analyzing.ModelInconsistencyException;
+import org.fiolino.common.util.Instantiator;
 import org.fiolino.searcher.*;
 import org.fiolino.searcher.NoSuchFieldException;
 import org.fiolino.searcher.fieldhandling.FacetType;
@@ -37,10 +38,10 @@ abstract class AbstractSearcher<T> implements Searcher<T> {
 
   private final ResultBuilder<T> resultBuilder;
 
-  public AbstractSearcher(TypeConfiguration<T> typeConfiguration) {
+  public AbstractSearcher(TypeConfiguration<T> typeConfiguration, Instantiator instantiator) {
     this.typeConfiguration = typeConfiguration;
     try {
-      resultBuilder = ResultBuilder.createAndAnalyze(typeConfiguration);
+      resultBuilder = ResultBuilder.createAndAnalyze(typeConfiguration, instantiator);
     } catch (ModelInconsistencyException ex) {
       throw new AssertionError(ex);
     }

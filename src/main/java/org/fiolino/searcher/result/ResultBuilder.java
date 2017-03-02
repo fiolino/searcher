@@ -8,6 +8,7 @@ import org.apache.solr.common.SolrDocument;
 import org.fiolino.common.analyzing.ModelInconsistencyException;
 import org.fiolino.common.processing.Processor;
 import org.fiolino.common.util.Encoder;
+import org.fiolino.common.util.Instantiator;
 import org.fiolino.data.base.Text;
 import org.fiolino.searcher.QueryBuilder;
 import org.fiolino.searcher.TypeConfiguration;
@@ -41,8 +42,8 @@ public final class ResultBuilder<T> {
     this.processor = processor;
   }
 
-  public static <T> ResultBuilder<T> createAndAnalyze(TypeConfiguration<T> typeConfiguration) throws ModelInconsistencyException {
-    return TypeConfigurationFactory.createAndAnalyze(typeConfiguration);
+  public static <T> ResultBuilder<T> createAndAnalyze(TypeConfiguration<T> typeConfiguration, Instantiator instantiator) throws ModelInconsistencyException {
+    return TypeConfigurationFactory.createAndAnalyze(typeConfiguration, instantiator);
   }
 
   public ResultItem<T> createResultFrom(T bean, SolrDocument doc) {

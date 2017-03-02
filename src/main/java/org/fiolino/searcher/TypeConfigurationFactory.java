@@ -62,6 +62,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     final TypeConfiguration<T> typeConfig;
 
     private final Prefix prefix;
+    private final Instantiator instantiator;
 
     private final boolean useTexts;
 
@@ -71,23 +72,24 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     private final Set<String> processedCategories;
 
-    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig) {
-        this(typeConfig, Prefix.EMPTY, true, Cardinality.TO_ONE, new HashSet<String>());
+    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator) {
+        this(typeConfig, instantiator, Prefix.EMPTY, true, Cardinality.TO_ONE, new HashSet<>());
     }
 
-    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Prefix prefix, boolean useTexts,
+    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator, Prefix prefix, boolean useTexts,
                                      Cardinality cardinality, Set<String> processedCategories) {
         this.typeConfig = typeConfig;
+        this.instantiator = instantiator;
         this.prefix = prefix;
         this.useTexts = useTexts;
         this.cardinality = cardinality;
         this.processedCategories = processedCategories;
     }
 
-    public static <T> ResultBuilder<T> createAndAnalyze(TypeConfiguration<T> typeConfiguration) throws ModelInconsistencyException {
+    public static <T> ResultBuilder<T> createAndAnalyze(TypeConfiguration<T> typeConfiguration, Instantiator instantiator) throws ModelInconsistencyException {
         Container configuration = SearchService.SCHEMA.createContainer();
         ModelDescription modelDescription = new ModelDescription(typeConfiguration.type(), configuration);
-        MainTypeConfigurationFactory<T> factory = new MainTypeConfigurationFactory<>(typeConfiguration);
+        MainTypeConfigurationFactory<T> factory = new MainTypeConfigurationFactory<>(typeConfiguration, instantiator);
         Analyzer.analyzeAll(modelDescription, factory);
 
         return factory.createResultBuilder();
@@ -552,9 +554,9 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
             return;
         }
         SubTypeConfigurationFactory<V> subFactory = new SubTypeConfigurationFactory<>(typeConfig,
-                subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
+                instantiator, subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
         Analyzer.analyzeAll(relationTarget, subFactory);
-        Supplier<V> factory = Instantiator.creatorFor(targetType);
+        Supplier<V> factory = instantiator.creatorFor(targetType);
         register(subFactory.<T>createRelationSettingProcessor(setter, factory));
     }
 
@@ -876,9 +878,9 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         Register registerAnnotation;
         private final String[] aliases;
 
-        SubTypeConfigurationFactory(TypeConfiguration typeConfig, Prefix prefix, boolean useTexts, String[] aliases,
+        SubTypeConfigurationFactory(TypeConfiguration typeConfig, Instantiator instantiator, Prefix prefix, boolean useTexts, String[] aliases,
                                     Cardinality cardinality, @Nullable Register registerAnnotation, Set<String> processedCategories) {
-            super(typeConfig, prefix, useTexts, cardinality, processedCategories);
+            super(typeConfig, instantiator, prefix, useTexts, cardinality, processedCategories);
             this.aliases = aliases;
             this.registerAnnotation = registerAnnotation;
         }
@@ -969,8 +971,8 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     private static class MainTypeConfigurationFactory<T> extends TypeConfigurationFactory<T> {
 
-        MainTypeConfigurationFactory(TypeConfiguration<T> typeConfig) {
-            super(typeConfig);
+        MainTypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator) {
+            super(typeConfig, instantiator);
         }
 
         ResultBuilder<T> createResultBuilder() {
