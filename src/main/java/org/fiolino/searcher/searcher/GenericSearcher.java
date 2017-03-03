@@ -22,7 +22,7 @@ public class GenericSearcher<T> extends AbstractSearcher<T> {
   }
 
   public GenericSearcher(Class<T> modelType, FilterDomain filterDomain, Instantiator instantiator) {
-    this(modelType, filterDomain, instantiator, instantiator.creatorFor(modelType));
+    this(modelType, filterDomain, instantiator, instantiator.createSupplierFor(modelType));
   }
 
   public GenericSearcher(Class<T> modelType, FilterDomain filterDomain, Instantiator instantiator, Supplier<T> factory) {

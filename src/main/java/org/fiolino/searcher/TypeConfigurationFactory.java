@@ -556,7 +556,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         SubTypeConfigurationFactory<V> subFactory = new SubTypeConfigurationFactory<>(typeConfig,
                 instantiator, subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
         Analyzer.analyzeAll(relationTarget, subFactory);
-        Supplier<V> factory = instantiator.creatorFor(targetType);
+        Supplier<V> factory = instantiator.createSupplierFor(targetType);
         register(subFactory.<T>createRelationSettingProcessor(setter, factory));
     }
 
