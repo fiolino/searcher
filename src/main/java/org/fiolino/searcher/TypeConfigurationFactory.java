@@ -1,7 +1,6 @@
 package org.fiolino.searcher;
 
 import org.apache.solr.common.SolrDocument;
-import org.fiolino.common.FieldType;
 import org.fiolino.common.analyzing.Analyzeable;
 import org.fiolino.common.analyzing.AnnotationInterest;
 import org.fiolino.common.analyzing.ModelInconsistencyException;
@@ -15,6 +14,7 @@ import org.fiolino.common.reflection.Methods;
 import org.fiolino.common.util.*;
 import org.fiolino.data.annotation.*;
 import org.fiolino.data.base.Text;
+import org.fiolino.searcher.names.*;
 import org.fiolino.searcher.result.ResultBuilder;
 import org.fiolino.searcher.result.ResultItem;
 import org.slf4j.Logger;
@@ -157,7 +157,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                 typeConfig.registerFullTextField(wildcardExpander, boost);
             }
             MapFieldProcessor<T> fieldProcessor;
-            Class<?> mapValueType = Types.getRawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
+            Class<?> mapValueType = Types.rawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
             if (Collection.class.isAssignableFrom(mapValueType)) {
                 fieldProcessor = new MultiValueMapFieldProcessor<>(convertedSetter, wildcardExpander, converter);
             } else {
@@ -260,7 +260,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         } else if (fieldIsMap(field)) {
             MethodHandle converted = makeTypedSetter(setter, Map.class);
             Pattern wildcardExpander = createWildcardPattern(solrNames[0]);
-            Class<?> mapValueType = Types.getRawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
+            Class<?> mapValueType = Types.rawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
             if (Collection.class.isAssignableFrom(mapValueType)) {
                 register(new MultiValueMapRelationProcessor<T>(converted, wildcardExpander, converter));
             } else {
@@ -424,8 +424,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         }
         String[] remaining = new String[n];
         int x = 0;
-        for (int i = 0; i < categories.length; i++) {
-            String c = categories[i];
+        for (String c : categories) {
             if (!duplicates.contains(c)) {
                 remaining[x++] = c;
             }

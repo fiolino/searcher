@@ -1,16 +1,16 @@
 package org.fiolino.searcher;
 
-import org.fiolino.common.FieldType;
 import org.fiolino.common.analyzing.Analyzeable;
 import org.fiolino.common.analyzing.AnnotationInterest;
 import org.fiolino.common.analyzing.ModelInconsistencyException;
 import org.fiolino.common.container.Container;
 import org.fiolino.common.container.Selector;
 import org.fiolino.common.ioc.Beans;
-import org.fiolino.common.processing.*;
+import org.fiolino.common.processing.ValueDescription;
 import org.fiolino.data.annotation.Indexed;
 import org.fiolino.data.annotation.Name;
 import org.fiolino.data.annotation.Naming;
+import org.fiolino.searcher.names.*;
 
 import java.lang.invoke.MethodHandles;
 
