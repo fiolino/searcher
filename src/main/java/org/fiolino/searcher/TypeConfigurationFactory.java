@@ -7,7 +7,10 @@ import org.fiolino.common.analyzing.ModelInconsistencyException;
 import org.fiolino.common.container.Container;
 import org.fiolino.common.container.Selector;
 import org.fiolino.common.ioc.Beans;
-import org.fiolino.common.processing.*;
+import org.fiolino.common.processing.Analyzer;
+import org.fiolino.common.processing.ModelDescription;
+import org.fiolino.common.processing.Processor;
+import org.fiolino.common.processing.ValueDescription;
 import org.fiolino.common.reflection.Converters;
 import org.fiolino.common.reflection.ExceptionHandler;
 import org.fiolino.common.reflection.Methods;
@@ -63,6 +66,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     private final Prefix prefix;
     private final Instantiator instantiator;
+    private final DeserializerBuilder deserializerBuilder;
 
     private final boolean useTexts;
 
@@ -73,13 +77,14 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     private final Set<String> processedCategories;
 
     private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator) {
-        this(typeConfig, instantiator, Prefix.EMPTY, true, Cardinality.TO_ONE, new HashSet<>());
+        this(typeConfig, instantiator, new DeserializerBuilder(instantiator), Prefix.EMPTY, true, Cardinality.TO_ONE, new HashSet<>());
     }
 
-    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator, Prefix prefix, boolean useTexts,
-                                     Cardinality cardinality, Set<String> processedCategories) {
+    private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator, DeserializerBuilder deserializerBuilder,
+                                     Prefix prefix, boolean useTexts, Cardinality cardinality, Set<String> processedCategories) {
         this.typeConfig = typeConfig;
         this.instantiator = instantiator;
+        this.deserializerBuilder = deserializerBuilder;
         this.prefix = prefix;
         this.useTexts = useTexts;
         this.cardinality = cardinality;
@@ -226,7 +231,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                                            String solrName, String tagName, Class<V> targetType,
                                            Hint hint) throws ModelInconsistencyException {
 
-        MethodHandle facetHandler = DeserializerBuilder.getDeserializer(targetType);
+        MethodHandle facetHandler = deserializerBuilder.getDeserializer(targetType);
         if (fieldIsMap(field)) {
             if (solrName.indexOf('*') < 0) {
                 solrName += "_*";
@@ -274,7 +279,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     }
 
     private void registerDeserializedRelation(ValueDescription field, final String[] solrNames) throws ModelInconsistencyException {
-        registerRelationWith(field, DeserializerBuilder.getDeserializer(field.getTargetType()), solrNames);
+        registerRelationWith(field, deserializerBuilder.getDeserializer(field.getTargetType()), solrNames);
     }
 
     @AnnotationInterest(INITIALIZING)
@@ -553,7 +558,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
             return;
         }
         SubTypeConfigurationFactory<V> subFactory = new SubTypeConfigurationFactory<>(typeConfig,
-                instantiator, subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
+                instantiator, deserializerBuilder, subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
         Analyzer.analyzeAll(relationTarget, subFactory);
         Supplier<V> factory = instantiator.createSupplierFor(targetType);
         register(subFactory.<T>createRelationSettingProcessor(setter, factory));
@@ -877,9 +882,9 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         Register registerAnnotation;
         private final String[] aliases;
 
-        SubTypeConfigurationFactory(TypeConfiguration typeConfig, Instantiator instantiator, Prefix prefix, boolean useTexts, String[] aliases,
+        SubTypeConfigurationFactory(TypeConfiguration typeConfig, Instantiator instantiator, DeserializerBuilder deserializerBuilder, Prefix prefix, boolean useTexts, String[] aliases,
                                     Cardinality cardinality, @Nullable Register registerAnnotation, Set<String> processedCategories) {
-            super(typeConfig, instantiator, prefix, useTexts, cardinality, processedCategories);
+            super(typeConfig, instantiator, deserializerBuilder, prefix, useTexts, cardinality, processedCategories);
             this.aliases = aliases;
             this.registerAnnotation = registerAnnotation;
         }
