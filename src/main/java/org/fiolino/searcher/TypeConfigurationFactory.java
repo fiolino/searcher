@@ -77,7 +77,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     private final Set<String> processedCategories;
 
     private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator) {
-        this(typeConfig, instantiator, new DeserializerBuilder(instantiator), Prefix.EMPTY, true, Cardinality.TO_ONE, new HashSet<>());
+        this(typeConfig, instantiator, new DeserializerBuilder(instantiator), Prefix.root(), true, Cardinality.TO_ONE, new HashSet<>());
     }
 
     private TypeConfigurationFactory(TypeConfiguration<T> typeConfig, Instantiator instantiator, DeserializerBuilder deserializerBuilder,

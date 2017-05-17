@@ -3,29 +3,51 @@ package org.fiolino.searcher.names;
 import java.util.Arrays;
 
 /**
+ * Prefix is an unmodifiable object which contains the prefix string for some concatenated name.
+ *
+ * Various prefixes can be attached together, separated by the given separator.
+ *
  * Created by kuli on 15.01.16.
  */
 public abstract class Prefix {
 
-    final String concatenator;
+    final String separator;
 
-    Prefix(String concatenator) {
-        this.concatenator = concatenator;
+    Prefix(String separator) {
+        this.separator = separator;
     }
 
+    /**
+     * Creates an array of full names, one for each prefix and suffix combination.
+     *
+     * @param fieldNames Some names
+     * @return An array with at least one entry per name
+     */
     public abstract String[] createNames(String... fieldNames);
 
-    public abstract boolean isInitial();
+    /**
+     * Checks whether this is the root element.
+     */
+    public abstract boolean isRoot();
 
+    /**
+     * Creates a new prefix with the given path elements.
+     *
+     * @param subNames Some names; may be multiple ones if there are alternatives
+     * @return A Prefix which will return isRoot() == false
+     */
     public Prefix newSubPrefix(String... subNames) {
-        return new NamedPrefix(createNames(subNames), concatenator);
+        return new NamedPrefix(createNames(subNames), separator);
     }
 
     private static class NamedPrefix extends Prefix {
         private final String[] heads;
 
-        NamedPrefix(String[] heads, String concatenator) {
-            super(concatenator);
+        NamedPrefix(String[] heads, String separator) {
+            super(separator);
+            if (heads.length == 0) {
+                throw new IllegalArgumentException("No head elements given!");
+            }
             this.heads = heads;
         }
 
@@ -36,14 +58,14 @@ public abstract class Prefix {
             int i = 0;
             for (String h : heads) {
                 for (String f : fieldNames) {
-                    result[i++] = h + concatenator + f;
+                    result[i++] = h + separator + f;
                 }
             }
             return result;
         }
 
         @Override
-        public boolean isInitial() {
+        public boolean isRoot() {
             return false;
         }
 
@@ -55,8 +77,8 @@ public abstract class Prefix {
 
     private static class EmptyPrefix extends Prefix {
 
-        EmptyPrefix(String concatenator) {
-            super(concatenator);
+        EmptyPrefix(String separator) {
+            super(separator);
         }
 
         @Override
@@ -65,19 +87,28 @@ public abstract class Prefix {
         }
 
         @Override
-        public boolean isInitial() {
+        public boolean isRoot() {
             return true;
         }
 
         @Override
         public String toString() {
-            return "Prefix.EMPTY";
+            return "Prefix.root(\"" + separator + "\")";
         }
     }
 
-    public static Prefix empty(String concatenator) {
-        return new EmptyPrefix(concatenator);
+    /**
+     * Creates a root Prefix with the given separator string.
+     */
+    public static Prefix root(String separator) {
+        return new EmptyPrefix(separator);
     }
 
-    public static final Prefix EMPTY = new EmptyPrefix("-");
+    private static class Holder {
+        private static final Prefix DEFAULT = root("-");
+    }
+
+    public static Prefix root() {
+        return Holder.DEFAULT;
+    }
 }
