@@ -19,7 +19,7 @@ public interface Searcher<T> {
   /**
    * Creates a query builder.
    *
-   * @param realm For which mandator
+   * @param realm For which realm
    */
   QueryBuilder createQueryBuilder(Realm realm);
 
@@ -41,18 +41,13 @@ public interface Searcher<T> {
 
   /**
    * Searches for some given ids.
-   *
-   * @param realm
-   * @param filterField
-   * @param ids
-   * @return
    */
   List<T> searchByIDs(Realm realm, String filterField, Long... ids);
 
   /**
    * Gets the suggestion list.
    *
-   * @param realm For which mandator
+   * @param realm For which realm
    * @param input the used prefix
    * @return
    */

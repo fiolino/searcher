@@ -8,9 +8,9 @@ import org.fiolino.common.container.Container;
 import org.fiolino.common.container.Selector;
 import org.fiolino.common.ioc.Beans;
 import org.fiolino.common.processing.Analyzer;
+import org.fiolino.common.processing.FieldDescription;
 import org.fiolino.common.processing.ModelDescription;
 import org.fiolino.common.processing.Processor;
-import org.fiolino.common.processing.ValueDescription;
 import org.fiolino.common.reflection.Converters;
 import org.fiolino.common.reflection.ExceptionHandler;
 import org.fiolino.common.reflection.Methods;
@@ -113,11 +113,11 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         return MethodHandles.lookup();
     }
 
-    private boolean fieldIsMulti(ValueDescription field) {
+    private boolean fieldIsMulti(FieldDescription field) {
         return Collection.class.isAssignableFrom(field.getValueType());
     }
 
-    private boolean fieldIsMap(ValueDescription field) {
+    private boolean fieldIsMap(FieldDescription field) {
         return Map.class.isAssignableFrom(field.getValueType());
     }
 
@@ -125,7 +125,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         processor = processor.andThen(next);
     }
 
-    void registerField(ValueDescription field,
+    void registerField(FieldDescription field,
                        String name,
                        String[] solrNames,
                        Class<?> targetType,
@@ -150,7 +150,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
         boolean fieldIsMap = fieldIsMap(field);
         boolean isFullText = useTexts && Text.class.isAssignableFrom(targetType);
-        MethodHandle setter = field.createSetter();
+        MethodHandle setter = createSetterOf(field);
         if (setter == null) {
             return;
         }
@@ -162,11 +162,11 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                 typeConfig.registerFullTextField(wildcardExpander, boost);
             }
             MapFieldProcessor<T> fieldProcessor;
-            Class<?> mapValueType = Types.rawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
+            Class<?> mapValueType = Types.erasedArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
             if (Collection.class.isAssignableFrom(mapValueType)) {
                 fieldProcessor = new MultiValueMapFieldProcessor<>(convertedSetter, wildcardExpander, converter);
             } else {
-                fieldProcessor = new MapFieldProcessor<T>(convertedSetter, wildcardExpander, converter);
+                fieldProcessor = new MapFieldProcessor<>(convertedSetter, wildcardExpander, converter);
             }
             register(fieldProcessor);
         } else {
@@ -175,15 +175,15 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
             }
             if (fieldIsMulti(field)) {
                 MethodHandle listSetter = makeTypedSetter(setter, List.class);
-                register(new MultiFieldProcessor<T>(listSetter, solrNames, converter));
+                register(new MultiFieldProcessor<>(listSetter, solrNames, converter));
             } else {
                 if (targetType.isEnum()) {
                     setter = MethodHandles.filterArguments(makeObjectSetter(setter), 1, converter);
                 } else if (Text.class.isAssignableFrom(targetType)) {
-                    register(new TextFieldProcessor<T>(setter, solrNames));
+                    register(new TextFieldProcessor<>(setter, solrNames));
                     return;
                 }
-                register(new SingleFieldProcessor<T>(setter, solrNames));
+                register(new SingleFieldProcessor<>(setter, solrNames));
             }
         }
     }
@@ -197,13 +197,14 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     private MethodHandle findConverter(Class<?> targetType) {
         MethodHandle converter;
         if (targetType.isEnum()) {
-            converter = Methods.convertStringToEnum(targetType.asSubclass(Enum.class), new ExceptionHandler<IllegalArgumentException>() {
-                @Override
-                public void handleNotExisting(IllegalArgumentException ex, Class<?> input, Class<?> output, Object inputString)
-                        throws IllegalArgumentException {
-                    logger.warn("No enum " + inputString + " for " + output.getName());
-                }
+            converter = Methods.convertStringToEnum(targetType.asSubclass(Enum.class), (f, v) -> {
+                IndexedAs anno = f.getAnnotation(IndexedAs.class);
+                return anno == null ? null : anno.value();
             });
+            converter = Methods.wrapWithExceptionHandler(converter, IllegalArgumentException.class, (ex, v) -> {
+                    logger.warn("No enum " + v[0] + " for " + targetType.getName());
+                    return null;
+                });
         } else if (Text.class.isAssignableFrom(targetType)) {
             converter = Converters.createSimpleConverter(getLookup(), String.class, Text.class);
         } else {
@@ -227,7 +228,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     /**
      * Registers a facet whioch is a relation to a full serialized object.
      */
-    private <V> void registerFacetRelation(ValueDescription field, String[] facetNames,
+    private <V> void registerFacetRelation(FieldDescription field, String[] facetNames,
                                            String solrName, String tagName, Class<V> targetType,
                                            Hint hint) throws ModelInconsistencyException {
 
@@ -251,34 +252,34 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
     /**
      * Registers a serialized relation so that the returned value is gonna be written into the model via the setter.
      */
-    private void registerRelationWith(ValueDescription field, MethodHandle converter,
+    private void registerRelationWith(FieldDescription field, MethodHandle converter,
                                       String... solrNames) {
 
-        MethodHandle setter = field.createSetter();
+        MethodHandle setter = createSetterOf(field);
         if (setter == null) {
             return;
         }
 
         if (fieldIsMulti(field)) {
             MethodHandle converted = makeTypedSetter(setter, List.class);
-            register(new MultiFieldProcessor<T>(converted, solrNames, converter));
+            register(new MultiFieldProcessor<>(converted, solrNames, converter));
         } else if (fieldIsMap(field)) {
             MethodHandle converted = makeTypedSetter(setter, Map.class);
             Pattern wildcardExpander = createWildcardPattern(solrNames[0]);
-            Class<?> mapValueType = Types.rawArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
+            Class<?> mapValueType = Types.erasedArgument(field.getGenericType(), Map.class, 1, Types.Bounded.UPPER);
             if (Collection.class.isAssignableFrom(mapValueType)) {
-                register(new MultiValueMapRelationProcessor<T>(converted, wildcardExpander, converter));
+                register(new MultiValueMapRelationProcessor<>(converted, wildcardExpander, converter));
             } else {
-                register(new MapRelationProcessor<T>(converted, wildcardExpander, converter));
+                register(new MapRelationProcessor<>(converted, wildcardExpander, converter));
             }
         } else {
             // (void)T,String
             MethodHandle fullSetter = MethodHandles.filterArguments(setter, 1, converter);
-            register(new SingleFieldProcessor<T>(fullSetter, solrNames));
+            register(new SingleFieldProcessor<>(fullSetter, solrNames));
         }
     }
 
-    private void registerDeserializedRelation(ValueDescription field, final String[] solrNames) throws ModelInconsistencyException {
+    private void registerDeserializedRelation(FieldDescription field, final String[] solrNames) throws ModelInconsistencyException {
         registerRelationWith(field, deserializerBuilder.getDeserializer(field.getTargetType()), solrNames);
     }
 
@@ -297,7 +298,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     @AnnotationInterest(INITIALIZING)
     @SuppressWarnings("unused")
-    protected void setFiltered(Container configuration, ValueDescription field, Filterable filterable) {
+    protected void setFiltered(Container configuration, FieldDescription field, Filterable filterable) {
         Filtered previous = configuration.get(FILTERED);
         if (previous != Filtered.NEVER) {
             configuration.set(FILTERED, Filtered.YES);
@@ -316,7 +317,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         configuration.set(FILTERED, Filtered.YES);
     }
 
-    private String[] getSolrNames(ValueDescription field, FieldType fieldType, String primary, String[] compatibilities) {
+    private String[] getSolrNames(FieldDescription field, FieldType fieldType, String primary, String[] compatibilities) {
         Container configuration = field.getConfiguration();
         NamingPolicy policy = NAMING_POLICY.get(configuration);
         Filtered filtered = FILTERED.get(configuration);
@@ -342,7 +343,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     @AnnotationInterest(PROCESSING)
     @SuppressWarnings("unused")
-    protected void setIndexed(ValueDescription field, Container configuration, Indexed indexed)
+    protected void setIndexed(FieldDescription field, Container configuration, Indexed indexed)
             throws ModelInconsistencyException {
 
         if (Boolean.TRUE.equals(configuration.get(IS_HANDLED_BY_FACET))) {
@@ -439,7 +440,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     @AnnotationInterest(PREPROCESSING)
     @SuppressWarnings("unused")
-    protected void setFacet(ValueDescription field, Container configuration, Facet facet) throws ModelInconsistencyException {
+    protected void setFacet(FieldDescription field, Container configuration, Facet facet) throws ModelInconsistencyException {
         String[] categories = unusedCategories(facet.value());
         if (categories == null) {
             return;
@@ -472,7 +473,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
     @AnnotationInterest(PREPROCESSING)
     @SuppressWarnings("unused")
-    protected void setDateFacet(ValueDescription field, Container configuration, DateFacet facet) {
+    protected void setDateFacet(FieldDescription field, Container configuration, DateFacet facet) {
         String yearFieldName = Strings.normalizeName(facet.year()) + FACET_ID_SUFFIX;
         String monthFieldName = Strings.normalizeName(facet.month()) + FACET_ID_SUFFIX;
 
@@ -488,7 +489,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         typeConfig.registerField(monthFieldName, facet.month());
     }
 
-    private void registerSimpleFacetField(ValueDescription field, String[] filterNames, String solrName, String tagName,
+    private void registerSimpleFacetField(FieldDescription field, String[] filterNames, String solrName, String tagName,
                                           Class<?> targetType, Hint hint) {
         FieldType fieldType = FieldType.getDefaultFor(targetType);
         Cardinality fieldCardinality = cardinality.join(field.getGenericType());
@@ -518,7 +519,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         return !valueType.isPrimitive() && FieldType.getDefaultFor(valueType) == null;
     }
 
-    private <V> void handleRelation(ValueDescription field, Class<V> targetType, String[] names, boolean useTexts)
+    private <V> void handleRelation(FieldDescription field, Class<V> targetType, String[] names, boolean useTexts)
             throws ModelInconsistencyException {
         Prefix subPrefix = prefix.newSubPrefix(names);
         String[] aliases = field.getConfiguration().get(FIELD_ALIASES);
@@ -529,7 +530,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                 throw new IllegalStateException(field + " has @Register annotation but has no fields defined; it's a relation.");
             }
         }
-        MethodHandle setter = field.createSetter();
+        MethodHandle setter = createSetterOf(field);
         if (setter == null) {
             logger.warn("No setter for " + field);
             return;
@@ -561,7 +562,14 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                 instantiator, deserializerBuilder, subPrefix, useTexts, aliases, cardinality, reg, processedCategories);
         Analyzer.analyzeAll(relationTarget, subFactory);
         Supplier<V> factory = instantiator.createSupplierFor(targetType);
-        register(subFactory.<T>createRelationSettingProcessor(setter, factory));
+        register(subFactory.createRelationSettingProcessor(setter, factory));
+    }
+
+    private MethodHandle createSetterOf(FieldDescription field) {
+        MethodHandle setter = field.createSetter();
+        if (setter == null) return null;
+        return Methods.wrapWithExceptionHandler(setter, Throwable.class,
+                ExceptionHandler.rethrowException(DataTransferException::new, "Failed to write {2} into {1} for '{0}'"), field.getName());
     }
 
     private float getFieldBoost(Indexed annotation) {
@@ -613,7 +621,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                         postProcessValue(i, solrNames, value);
                         return;
                     }
-                } catch (RuntimeException | Error e) {
+                } catch (Exception e) {
                     throw e;
                 } catch (Throwable t) {
                     throw new AssertionError(t);
@@ -895,7 +903,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         }
 
         @Override
-        void registerField(ValueDescription field, String name, String[] solrNames, Class<?> targetType, float boost) {
+        void registerField(FieldDescription field, String name, String[] solrNames, Class<?> targetType, float boost) {
             if (registerAnnotation != null) {
                 for (String f : registerAnnotation.fields()) {
                     if (f.equals(name)) {
@@ -925,7 +933,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
 
         <V> Processor<SolrDocument, ResultItem<V>> createRelationSettingProcessor(MethodHandle setter, Supplier<U> factory) {
             MethodHandle casted = makeObjectSetter(setter);
-            return new RelationSettingProcessor<V>(factory, casted);
+            return new RelationSettingProcessor<>(factory, casted);
         }
 
         private final class RelationSettingProcessor<V> implements Processor<SolrDocument, ResultItem<V>> {
@@ -991,7 +999,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
                 throw new IllegalStateException("No ID field defined in " + typeConfig);
             }
 
-            register(new IDFieldProcessor<T>(idField.getSolrName()));
+            register(new IDFieldProcessor<>(idField.getSolrName()));
         }
     }
 }

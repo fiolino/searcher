@@ -13,7 +13,7 @@ public enum Cardinality {
     TO_ONE {
         @Override
         public Cardinality join(Type type) {
-            Class<?> rawType = Types.rawType(type);
+            Class<?> rawType = Types.erasureOf(type);
             if (Collection.class.isAssignableFrom(rawType)) {
                 return TO_MANY;
             }

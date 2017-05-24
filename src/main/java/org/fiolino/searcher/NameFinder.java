@@ -6,7 +6,7 @@ import org.fiolino.common.analyzing.ModelInconsistencyException;
 import org.fiolino.common.container.Container;
 import org.fiolino.common.container.Selector;
 import org.fiolino.common.ioc.Beans;
-import org.fiolino.common.processing.ValueDescription;
+import org.fiolino.common.processing.FieldDescription;
 import org.fiolino.data.annotation.Indexed;
 import org.fiolino.data.annotation.Name;
 import org.fiolino.data.annotation.Naming;
@@ -61,7 +61,7 @@ class NameFinder extends Analyzeable {
 
   @AnnotationInterest(INITIALIZING)
   @SuppressWarnings("unused")
-  private void setIndexed(ValueDescription field, Container configuration, Indexed indexed) throws ModelInconsistencyException {
+  private void setIndexed(FieldDescription field, Container configuration, Indexed indexed) throws ModelInconsistencyException {
     String indexName = indexed.value();
     if (indexName.isEmpty()) {
       indexName = field.getName();
@@ -73,7 +73,7 @@ class NameFinder extends Analyzeable {
 
   @AnnotationInterest(value = PREPROCESSING, annotation = Name.class)
   @SuppressWarnings("unused")
-  private void setName(ValueDescription field, Container configuration) {
+  private void setName(FieldDescription field, Container configuration) {
     String n = configuration.get(FIELD_NAME);
     if (n != null) {
       FieldType ft = configuration.get(FIELD_TYPE);

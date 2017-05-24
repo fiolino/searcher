@@ -1,6 +1,6 @@
 package org.fiolino.searcher.names;
 
-import org.fiolino.common.processing.ValueDescription;
+import org.fiolino.common.processing.FieldDescription;
 
 /**
  * @author Michael Kuhlmann <michael@kuhlmann.org>
@@ -21,6 +21,6 @@ public interface NamingPolicy {
      * @param hidden           If this fied's value is not used, i.w. it doesn't need to be stored
      * @return The name of the Solr field
      */
-    String[] names(String[] names, Prefix prefix, ValueDescription valueDescription,
+    String[] names(String[] names, Prefix prefix, FieldDescription valueDescription,
                    FieldType fieldType, Filtered filtered, Cardinality cardinality, boolean hidden);
 }

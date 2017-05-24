@@ -1,7 +1,7 @@
 package org.fiolino.searcher.names;
 
 import org.fiolino.common.ioc.Component;
-import org.fiolino.common.processing.ValueDescription;
+import org.fiolino.common.processing.FieldDescription;
 
 /**
  * @author Michael Kuhlmann <michael@kuhlmann.org>
@@ -10,7 +10,7 @@ import org.fiolino.common.processing.ValueDescription;
 public class DefaultNamingPolicy implements NamingPolicy {
 
     @Override
-    public String[] names(String[] names, Prefix prefix, ValueDescription valueDescription, FieldType fieldType, Filtered filtered, Cardinality cardinality, boolean hidden) {
+    public String[] names(String[] names, Prefix prefix, FieldDescription valueDescription, FieldType fieldType, Filtered filtered, Cardinality cardinality, boolean hidden) {
         String suffix = fieldType.getSuffix(cardinality, filtered.isFiltered(), hidden);
         if (suffix == null) {
             return null;
