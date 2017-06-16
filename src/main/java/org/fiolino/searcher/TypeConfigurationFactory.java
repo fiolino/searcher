@@ -569,7 +569,7 @@ public abstract class TypeConfigurationFactory<T> extends Analyzeable {
         MethodHandle setter = field.createSetter();
         if (setter == null) return null;
         return Methods.wrapWithExceptionHandler(setter, Throwable.class,
-                ExceptionHandler.rethrowException(DataTransferException::new, "Failed to write {2} into {1} for '{0}'"), field.getName());
+                ExceptionHandler.rethrowException(DataTransferException::new, "Failed to write {2} into {1} for '{0}'"), field::getName);
     }
 
     private float getFieldBoost(Indexed annotation) {
